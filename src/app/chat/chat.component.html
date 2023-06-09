@@ -1,0 +1,366 @@
+<div
+	[ngClass]="{'chat-minimized': minimized}"
+	id="chatbox"
+>
+	<ng-container>
+		<div
+			*ngIf="displayUsersList; else chatviewTemplate"
+			@friendslist
+			id="friendslist"
+		>
+			<!--        <div id="topmenu">-->
+			<!--            <span class="friends"></span>-->
+			<!--            <span class="chats"></span>-->
+			<!--            <span class="history"></span>-->
+			<!--        </div>-->
+			<div
+				(click)="Maximize($event)"
+				id="chat-actions"
+			>
+				<span class="chat-title">Leap Chat <span
+					*ngIf="chatService.UnreadMessages > 0"
+					class="badge badge-pill badge-danger"
+				>{{chatService.UnreadMessages}}</span></span>
+				<i
+					(click)="MarkAllRead($event)"
+					*ngIf="chatService.UnreadMessages > 0"
+					class="action-btn material-icons-round"
+					matTooltip="Mark all read"
+				>mark_chat_read</i>
+				<i
+					(click)="RefreshUsers($event)"
+					*ngIf="!minimized"
+					class="action-btn material-icons-round"
+					matTooltip="Refresh users"
+				>refresh</i>
+				<i
+					(click)="ToggleNotifications($event)"
+					[matTooltip]="chatMuted? 'Enable notifications' : 'Disable notifications'"
+					class="action-btn material-icons-round"
+				>{{chatMuted ? 'notifications_off' : 'notifications_active'}}</i>
+				<i
+					(click)="ToggleReadIndicator($event)"
+					[matTooltip]="chatService.readIndicatorEnabled? 'Disable read indicator' : 'Enable read indicator'"
+					class="action-btn material-icons-round"
+				>{{chatService.readIndicatorEnabled ? 'done_all' : 'remove_done'}}</i>
+				<i
+					(click)="Minimize($event)"
+					*ngIf="!minimized"
+					class="action-btn material-icons-round"
+					matTooltip="Minimize"
+				>minimize</i>
+				<!--                <i matTooltip="Maximize" (click)="minimized = !minimized" *ngIf="minimized"  class="action-btn material-icons-round">maximize</i>-->
+				<i
+					(click)="CloseChat($event)"
+					class="action-btn material-icons-round"
+					matTooltip="Close chat"
+				>close</i>
+			</div>
+			<div
+				*ngIf="chatService.chat.usersAvailable.length > 0; else noUsersConnectedTemplate"
+				id="friends"
+			>
+				<div class="list-container">
+					<div
+						(click)="OpenChat(user)"
+						*ngFor="let user of chatService.chat.usersAvailable"
+						@userAvailable
+						[attr.name]="user.name"
+						class="friend"
+					>
+						<div
+							[attr.user-badge]="user.initials"
+							[style.background-color]="user.color"
+							class="user-badge"
+							style="top: 6px; width: 30px; left: 126px; margin-top: 24px;"
+						></div>
+						<!--                <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/245657/1_copy.jpg" />-->
+						<span
+							*ngIf="user.unreadMessages > 0"
+							class="badge badge-pill badge-danger unread-messages-badge"
+						>{{user.unreadMessages}}</span>
+						<p>
+							<strong>{{user.name}}</strong>
+							<span>{{user.email}}</span>
+						</p>
+						<div class="status available"></div>
+					</div>
+				</div>
+				<div id="search">
+					<i class="material-icons-round search-icon">search</i>
+					<input
+            #searchFieldInput
+						(keyup)="FilterUsers(searchFieldInput.value)"
+						id="searchfield"
+						placeholder="Search users..."
+						type="text"
+						value=""
+					/>
+				</div>
+			</div>
+
+		</div>
+
+		<ng-template #chatviewTemplate>
+			<div
+				@chatview
+				class="p1"
+				id="chatview"
+			>
+				<div
+					(click)="Maximize($event)"
+					id="profile"
+				>
+
+					<i
+						(click)="Minimize($event)"
+						*ngIf="!minimized"
+						class="action-btn material-icons-round minimize-chat-btn"
+						matTooltip="Minimize conversation"
+					>minimize</i>
+					<i
+						(click)="ToggleChatSettings()"
+						*ngIf="!minimized"
+						class="action-btn material-icons-round chat-settings-btn"
+						matTooltip="Chat settings"
+					>tune</i>
+					<!--                    <i matTooltip="Maximize conversation" (click)="minimized = !minimized" *ngIf="minimized" class="action-btn material-icons-round maximize-chat-btn">maximize</i>-->
+					<div
+						(click)="CloseConversation()"
+						id="close"
+						matTooltip="Close conversation"
+					>
+						<div class="cy s1 s2 s3"></div>
+						<div class="cx s1 s2 s3"></div>
+					</div>
+					<div
+						[attr.user-badge]="this.chatService.GetActiveRoom().users[0].initials"
+						[style.background-color]="this.chatService.GetActiveRoom().users[0].color"
+						class="floatingImg"
+						style="top: 8px; width: 36px; left: 126px;"
+					></div>
+					<!--                <img src="https://s3-us-west-2.amazonaws.com/s.cdpn.io/245657/1_copy.jpg" class="floatingImg" style="top: 6px; width: 40px; left: 126px;">-->
+					<span
+						*ngIf="minimized && this.chatService.GetActiveRoom().unreadMessages > 0"
+						class="badge badge-pill badge-danger user-chat-unread-messages-badge"
+					>{{this.chatService.GetActiveRoom().unreadMessages}}</span>
+					<p class="animate">{{this.chatService.GetActiveRoom().users[0].name}}</p>
+					<span>{{this.chatService.GetActiveRoom().users[0].email}}</span>
+				</div>
+
+				<div
+					class="animate"
+					id="chat-messages"
+				>
+					<label>{{today}}</label>
+
+					<div
+						*ngFor="let message of this.chatService.GetActiveRoom().history"
+						@messageRemoved
+						[id]="'message-' + message.messageId"
+						[ngClass]="{'right': message.sender.id === userId}"
+						class="message"
+					>
+						<div
+							[attr.user-badge]="message.sender.initials"
+							[style.background-color]="message.sender.color"
+							class="user-badge"
+						></div>
+
+						<div
+							@bubble
+							class="bubble"
+						>
+							<div class="message-action-btns">
+								<i
+									(click)="ReplyMessage(message)"
+									class="material-icons-round message-action-btn reply-btn"
+									matTooltip="Reply"
+								>reply</i>
+								<ng-container *ngIf="message.sender.id === userId">
+									<i
+										(click)="EditMessage(message)"
+										*ngIf="message.type === 'string'"
+										class="material-icons-round message-action-btn edit-btn"
+										matTooltip="Edit"
+									>edit</i>
+									<i
+										(click)="DeleteMessage(message)"
+										class="material-icons-round message-action-btn delete-btn"
+										matTooltip="Delete"
+									>close</i>
+								</ng-container>
+							</div>
+
+							<ng-container *ngIf="message.action === 'reply' && message.actionMessage">
+								<div
+									(click)="FocusMessage(message.actionMessage)"
+									class="replied-message"
+									matTooltip="Replied"
+								>
+									{{message.actionMessage.message}}
+								</div>
+							</ng-container>
+
+							<ng-container [ngSwitch]="message.type">
+								<ng-container *ngSwitchCase="'string'">
+									{{message.message}}
+								</ng-container>
+								<ng-container *ngSwitchCase="'image'">
+									<img
+										(click)="OpenMessageImage(message.message)"
+										[src]="message.message"
+										class="message-image"
+									/>
+								</ng-container>
+								<ng-container *ngSwitchCase="'file'">
+									<div
+										class="message-file"
+										matTooltip="File"
+									>
+										<i
+											[matTooltip]="message.message"
+											class="material-icons-round message-file-icon"
+										>{{message.icon}}</i>
+										<div class="file-details">
+											<div class="message-file-name">
+												{{message.message}}
+											</div>
+											<div class="message-file-size">
+												{{message.size}}
+											</div>
+										</div>
+									</div>
+								</ng-container>
+							</ng-container>
+
+							<i
+								*ngIf="message.modified"
+								class="material-icons-round message-modified"
+								matTooltip="Edited"
+							>edit</i>
+
+							<div class="corner"></div>
+							<span>{{message.timestamp}}</span>
+							<i
+								*ngIf="message.sender.id === userId && message.read"
+								@zoom
+								class="material-icons-round read-icon"
+								matTooltip="Read"
+							>check</i>
+						</div>
+					</div>
+
+					<div
+						*ngIf="this.chatService.GetActiveRoom().typing"
+						class="message"
+					>
+						<div
+							@bubble
+							class="bubble typing"
+						>
+							<div class="ellipsis one"></div>
+							<div class="ellipsis two"></div>
+							<div class="ellipsis three"></div>
+						</div>
+					</div>
+
+				</div>
+				<div
+					*ngIf="emojiPickerOpen"
+					@slideUp
+					id="emoji-picker"
+				>
+					<div
+						(click)="InsertEmoji(emoji)"
+						*ngFor="let emoji of emojis"
+						class="emoji-cell"
+					>
+						{{emoji}}
+					</div>
+				</div>
+				<div
+					*ngIf="chatSettingsOpen"
+					@slideDownChatSettings
+					id="chat-settings"
+				>
+					<div class="quick-actions">
+						<i
+							(click)="ClearChat()"
+							class="material-icons-round quick-action-btn"
+							matTooltip="Clear all"
+						>clear_all</i>
+					</div>
+				</div>
+
+				<div
+					*ngIf="messageFocused"
+					@slideDown
+					class="message-focused"
+				>
+					<i class="material-icons-round message-focused-action-icon">{{messageFocusedAction === 'reply' ? 'reply' : 'edit'}}</i>
+					<i
+						(click)="ClearMessageFocused()"
+						class="material-icons-round message-focused-cancel-icon"
+						matTooltip="Cancel"
+					>close</i>
+					{{messageFocused.message}}
+				</div>
+				<div
+					*ngIf="!minimized"
+					id="sendmessage"
+				>
+					<i
+						(click)="SelectFile()"
+						class="material-icons-round file-icon"
+						matTooltip="Send file"
+					>attach_file</i>
+					<i
+						(click)="ToggleEmojiPicker()"
+						class="material-icons-round emoji-icon"
+						matTooltip="Emoji"
+					>sentiment_satisfied_alt</i>
+					<input
+            #messageInput
+						(keyup)="Typing($event)"
+						(keyup.enter)="SendMessage(messageInput)"
+						(keyup.escape)="MessageInputEscape()"
+						(paste)="PasteData($event)"
+						placeholder="Send message..."
+						type="text"
+					/>
+					<i
+						(click)="SendMessage(messageInput)"
+						class="material-icons-round send-icon"
+						id="send"
+					>send</i>
+				</div>
+
+			</div>
+		</ng-template>
+
+	</ng-container>
+	<ng-template #noUsersConnectedTemplate>
+		<div
+			*ngIf="!minimized"
+			class="center no-user-connected-message"
+		>
+			<i class="material-icons-round">person_off</i>
+			<p>No users connected</p>
+			<mat-progress-bar mode="buffer"></mat-progress-bar>
+		</div>
+
+	</ng-template>
+</div>
+
+<form id="ChatSelectFilesForm">
+	<input
+		(onFileSelected)="FileSelected($event)"
+		[uploader]="uploader"
+		accept="*"
+		hidden="true"
+		id="chatFileSelector"
+		ng2FileSelect
+		type="file"
+	/>
+</form>
